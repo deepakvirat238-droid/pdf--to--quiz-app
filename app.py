@@ -54,13 +54,6 @@ B) Berlin
 C) Paris
 D) Madrid
 Answer: C
-
-Q2. Which planet is Red Planet?
-A) Venus
-B) Mars
-C) Jupiter
-D) Saturn
-Answer: B
         """)
     
     uploaded_file = st.file_uploader("Upload PDF", type="pdf")
@@ -78,6 +71,8 @@ Answer: B
             st.session_state.user_answers = {}
         if 'current_q' not in st.session_state:
             st.session_state.current_q = 0
+        if 'show_answer' not in st.session_state:
+            st.session_state.show_answer = {}
         
         # Navigation
         col1, col2, col3 = st.columns([1, 2, 1])
@@ -91,7 +86,7 @@ Answer: B
                     st.session_state.current_q += 1
                     st.rerun()
             else:
-                if st.button("Finish"):
+                if st.button("Finish 🏁"):
                     # Calculate score
                     correct = 0
                     for q in questions:
@@ -104,22 +99,48 @@ Answer: B
         q = questions[st.session_state.current_q]
         st.subheader(f"Q{st.session_state.current_q+1}. {q['question']}")
         
-        user_answer = st.radio("Choose:", list(q['options'].keys()),
-                             format_func=lambda x: f"{x}) {q['options'][x]}",
-                             key=f"q_{q['id']}")
+        user_answer = st.radio(
+            "Select your answer:",
+            options=list(q['options'].keys()),
+            format_func=lambda x: f"{x}) {q['options'][x]}",
+            key=f"q_{q['id']}"
+        )
         
         st.session_state.user_answers[q['id']] = user_answer
         
+        # Check Answer Button
+        if st.button("Check Answer ✅", key=f"check_{q['id']}"):
+            st.session_state.show_answer[q['id']] = True
+        
+        # Show answer if checked
+        if st.session_state.show_answer.get(q['id']):
+            if user_answer == q['correct_answer']:
+                st.success("🎉 Correct! Well done!")
+            else:
+                st.error(f"❌ Incorrect! Correct answer is {q['correct_answer']}) {q['options'][q['correct_answer']]}")
+        
         # Progress
         st.progress((st.session_state.current_q + 1) / len(questions))
+        st.write(f"Progress: {st.session_state.current_q + 1}/{len(questions)}")
         
         # Show results if completed
         if hasattr(st.session_state, 'quiz_completed') and st.session_state.quiz_completed:
             st.balloons()
-            st.success(f"🎉 Score: {st.session_state.score}/{len(questions)}")
+            st.success(f"🎉 Your Score: {st.session_state.score}/{len(questions)}")
+            
+            # Show all answers
+            st.write("### 📊 Detailed Results:")
+            for i, question in enumerate(questions):
+                user_ans = st.session_state.user_answers.get(question['id'])
+                correct_ans = question['correct_answer']
+                with st.expander(f"Q{i+1}. {question['question']}"):
+                    if user_ans == correct_ans:
+                        st.success(f"Your answer: {user_ans} ✅ Correct!")
+                    else:
+                        st.error(f"Your answer: {user_ans} ❌ | Correct: {correct_ans}")
             
             if st.button("🔄 Restart Quiz"):
-                for key in ['user_answers', 'current_q', 'quiz_completed', 'score']:
+                for key in ['user_answers', 'current_q', 'show_answer', 'quiz_completed', 'score']:
                     if key in st.session_state:
                         del st.session_state[key]
                 st.rerun()
